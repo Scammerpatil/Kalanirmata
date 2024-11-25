@@ -3,38 +3,38 @@ import React, { ChangeEvent, useEffect, useState } from "react";
 import Navbar from "@/components/common/Navbar";
 import SideNav from "@/components/common/SideNav";
 import axios from "axios";
-import { ShowCustomToast } from "@/components/common/ShowCustomToast";
 import toast from "react-hot-toast";
 import { Teacher } from "@/types/Teacher";
 import { Subject } from "@/types/Subject";
 import { Assignment } from "@/types/Assignment";
 import Link from "next/link";
 
-interface teacherInterface {
-  teachersId: string;
-  subjectId: string;
+interface Division {
+  division: string;
+  teachers: Assignment[];
 }
 
-const CreateTimeTable = () => {
-  return (
-    <>
-      <Navbar />
-      <SideNav children={<CreateTimeTableComponent />} />
-    </>
-  );
-};
+const CreateTimeTable = () => (
+  <>
+    <Navbar />
+    <SideNav children={<CreateTimeTableComponent />} />
+  </>
+);
 
 const CreateTimeTableComponent = () => {
-  const [year, setYear] = useState("");
-  const [department, setDepartment] = useState("");
-  const [semester, setSemester] = useState("");
-  const [numDivisions, setNumDivisions] = useState(1);
+  const [year, setYear] = useState<string>("");
+  const [department, setDepartment] = useState<string>("");
+  const [semester, setSemester] = useState<string>("");
+  const [numDivisions, setNumDivisions] = useState<number>(1);
   const [downloadLink, setDownloadLink] = useState<string | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [teacherSubject, setTeacherSubject] = useState([]);
-  const [divisions, setDivisions] = useState(
-    Array.from({ length: numDivisions }, () => ({ division: "", teachers: [] }))
+  const [teacherSubject, setTeacherSubject] = useState<Assignment[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>(
+    Array.from({ length: numDivisions }, (_, i) => ({
+      division: `Division ${String.fromCharCode(65 + i)}`,
+      teachers: [],
+    }))
   );
 
   useEffect(() => {
@@ -48,13 +48,18 @@ const CreateTimeTableComponent = () => {
 
   const handleSubmit = async (e: ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
+    toast.loading("Fetching teachers and subjects...");
     try {
-      const teachersResponse = await axios.get(`/api/v1/teachers/all`);
-      const subjectsResponse = await axios.get(`/api/v1/subjects/all`);
-      const teacherSubjectResponse = axios.post(
-        `/api/v1/teacher-subject/getAssignment/`,
-        { year, department, semester }
-      );
+      const [teachersResponse, subjectsResponse, teacherSubjectResponse] =
+        await Promise.all([
+          axios.get(`/api/v1/teachers/all`),
+          axios.get(`/api/v1/subjects/all`),
+          axios.post(`/api/v1/teacher-subject/getAssignment/`, {
+            year,
+            department,
+            semester,
+          }),
+        ]);
 
       setTeachers(
         teachersResponse.data.filter(
@@ -69,15 +74,9 @@ const CreateTimeTableComponent = () => {
             subject.semester === Number(semester)
         )
       );
-      toast.promise(teacherSubjectResponse, {
-        loading: "Fetching teachers and subjects...",
-        success: (data) => {
-          setTeacherSubject(data.data);
-          return "Teachers and subjects fetched successfully!";
-        },
-        error: "Failed to fetch teachers and subjects.",
-      });
-    } catch (error: any) {
+      setTeacherSubject(teacherSubjectResponse.data);
+      toast.success("Teachers and subjects fetched successfully!");
+    } catch (error) {
       console.error(error);
       toast.error("Error fetching teachers or subjects.");
     }
@@ -111,27 +110,12 @@ const CreateTimeTableComponent = () => {
   };
 
   const handleFinalSubmit = async () => {
+    console.log(divisions);
     try {
-      const response = axios.post(`/api/v1/timetable/create`, divisions, {
-        responseType: "blob",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = axios.post(`/api/v1/timetable/create`, divisions);
       toast.promise(response, {
         loading: "Creating timetable...",
-        success: (data) => {
-          setDownloadLink(data.data.csvFilePath);
-          const url = window.URL.createObjectURL(new Blob([data.data]));
-          console.log(url);
-          const link = document.createElement("a");
-          link.href = url;
-          link.setAttribute("download", "timetable.csv");
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          return "Timetable created successfully!";
-        },
+        success: "Timetable created successfully!",
         error: "Failed to create timetable.",
       });
     } catch (error) {
@@ -227,20 +211,6 @@ const CreateTimeTableComponent = () => {
             <h3 className="text-2xl font-bold text-primary mb-4">
               Assign Teachers
             </h3>
-            <h4 className="text-xl font-semibold mb-2">Subjects:</h4>
-            <ul className="list-disc pl-6 mb-4">
-              {subjects.map((subject: Subject) => (
-                <li key={subject.subjectId}>{subject.name}</li>
-              ))}
-            </ul>
-            <h4 className="text-xl font-semibold mb-2">Teachers:</h4>
-            <ul className="list-disc pl-6 mb-4">
-              {teachers.map((teacher: Teacher) => (
-                <li key={teacher.teacherId}>
-                  {teacher.name} - {teacher.lecturesPerWeek}
-                </li>
-              ))}
-            </ul>
 
             {divisions.map((division, index) => (
               <div key={index} className="mb-6">
@@ -298,17 +268,6 @@ const CreateTimeTableComponent = () => {
               </button>
             </div>
           </div>
-        </div>
-      )}
-      {downloadLink && (
-        <div className="mt-5">
-          <a
-            className="btn btn-primary btn-outline"
-            href={downloadLink}
-            download
-          >
-            Download TimeTable
-          </a>
         </div>
       )}
     </div>

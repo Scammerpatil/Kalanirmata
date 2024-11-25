@@ -211,7 +211,7 @@ const UpdateSubject = () => {
             onChange={(e) =>
               setEditingSubject({
                 ...editingSubject,
-                duration: parseInt(e.target.value) || 1,
+                hoursPerWeek: parseInt(e.target.value) || 1,
               })
             }
             className="input input-bordered w-full mb-2"

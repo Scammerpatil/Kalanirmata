@@ -81,15 +81,6 @@ const SideNav = ({ children }: { children: ReactNode }) => {
           </li>
           <li>
             <Link
-              href="/assign-teachers-to-subjects"
-              className="btn btn-ghost text-base justify-start gap-3"
-            >
-              <UserCheck size={20} />
-              Assign Teachers to Subjects
-            </Link>
-          </li>
-          <li>
-            <Link
               href="/settings"
               className="btn btn-ghost text-base justify-start gap-3"
             >

@@ -19,7 +19,7 @@ const DeleteTeacher = () => {
   const handleDelete = async (teacher: Teacher) => {
     if (window.confirm("Are you sure you want to delete this teacher?")) {
       try {
-        await axios.delete(`api/v1/teachers/delete/${teacher.teacherId}`);
+        await axios.post(`api/v1/teachers/delete`, { _id: teacher._id });
         toast.success("Teacher deleted successfully");
         fetchTeachers();
       } catch (error) {

@@ -1,20 +1,26 @@
+import TeacherModel from "@/models/Teacher";
+import dbConfig from "@/middleware/db.config";
 import SubjectModel from "@/models/Subject";
 import { NextRequest, NextResponse } from "next/server";
+import TeacherSubjectMappingModel from "@/models/Mapping";
 
-export async function DELETE(req: NextRequest) {
+dbConfig();
+
+export async function POST(req: NextRequest) {
   try {
-    const { pathname } = req.nextUrl;
-    const id = pathname.split("/").pop();
-    if (!id) {
+    const { _id } = await req.json();
+    console.log(_id);
+    if (!_id) {
       return NextResponse.json(
         { message: "Subject ID is required" },
         { status: 400 }
       );
     }
-    const deletedSubject = await SubjectModel.findOneAndDelete({
-      _id: id,
+    const teacher = await TeacherModel.findByIdAndDelete(_id);
+    const teacherMapping = await TeacherSubjectMappingModel.deleteMany({
+      teacherId: _id,
     });
-    if (!deletedSubject) {
+    if (!teacher && !teacherMapping) {
       return NextResponse.json(
         { message: "Subject not found" },
         { status: 404 }

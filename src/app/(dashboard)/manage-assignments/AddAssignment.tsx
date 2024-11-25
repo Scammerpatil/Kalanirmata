@@ -2,21 +2,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import Navbar from "@/components/common/Navbar";
-import SideNav from "@/components/common/SideNav";
 import { Teacher } from "@/types/Teacher";
 import { Subject } from "@/types/Subject";
-
-const AssignTeacher = () => {
-  return (
-    <>
-      <Navbar />
-      <SideNav children={<AssignTeacherComponent />} />
-    </>
-  );
-};
-
-export default AssignTeacher;
 
 const AssignTeacherComponent = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -183,3 +170,5 @@ const AssignTeacherComponent = () => {
     </div>
   );
 };
+
+export default AssignTeacherComponent;
