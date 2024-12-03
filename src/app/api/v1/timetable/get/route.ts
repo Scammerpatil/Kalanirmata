@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { TimetableModel } from "../create/route";
 import dbConfig from "@/middleware/db.config";
+import { TimetableModel } from "@/models/TimeTable";
 
 dbConfig();
 

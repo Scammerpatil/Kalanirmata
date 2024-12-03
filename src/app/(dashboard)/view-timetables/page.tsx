@@ -5,6 +5,9 @@ import SideNav from "@/components/common/SideNav";
 import ToastContainer from "@/components/common/ToastContainer";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Delete } from "lucide-react";
+import toast from "react-hot-toast";
+import * as XLSX from "xlsx";
 
 const ViewTimetablesPage = () => {
   return (
@@ -19,15 +22,18 @@ export default ViewTimetablesPage;
 
 const ViewTimeTableComponent = () => {
   const [timetableData, setTimetableData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Fetch timetable data from the API
     const fetchTimetables = async () => {
       try {
+        setLoading(true);
         const response = await axios.get("/api/v1/timetable/get");
         setTimetableData(response.data);
       } catch (error) {
         console.error("Error fetching timetables:", error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchTimetables();
@@ -40,6 +46,22 @@ const ViewTimeTableComponent = () => {
     acc[item.department][item.semester].push(item);
     return acc;
   }, {});
+
+  const deleteTimeTable = async (id: string) => {
+    try {
+      const response = axios.post(`/api/v1/timetable/delete`, { id });
+      toast.promise(response, {
+        loading: "Deleting timetable...",
+        success: "Timetable deleted successfully!",
+        error: "Failed to delete timetable.",
+      });
+      setTimetableData((prev) =>
+        prev.filter((timetable) => timetable.id !== id)
+      );
+    } catch (error) {
+      console.error("Error deleting timetable:", error);
+    }
+  };
 
   const slotTimes = [
     "10:30 - 11:30",
@@ -58,89 +80,118 @@ const ViewTimeTableComponent = () => {
       <div className="p-4">
         <h1 className="text-xl font-bold mb-4">View Timetables</h1>
         <div className="w-full">
-          {Object.entries(groupedData).map(([department, semesters]: any) => (
-            <div key={department} className="mb-4">
-              <div
-                tabIndex={0}
-                className="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box"
-              >
-                <input type="checkbox" />
-                <div className="collapse-title text-lg font-semibold">
-                  {department}
-                </div>
-                <div className="collapse-content">
-                  {Object.entries(semesters).map(
-                    ([semester, divisions]: any) => (
-                      <div key={semester} className="mb-4">
-                        <div
-                          tabIndex={0}
-                          className="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box"
-                        >
-                          <input type="checkbox" />
-                          <div className="collapse-title text-md font-medium">
-                            Semester: {semester}
-                          </div>
-                          <div className="collapse-content">
-                            {divisions.map((division: any) => (
-                              <div key={division.division} className="mb-4">
-                                <h3 className="text-sm font-medium mb-2">
-                                  Division: {division.division}
-                                </h3>
-                                <table className="table w-full border border-gray-300">
-                                  <thead>
-                                    <tr>
-                                      <th>Day/Slot</th>
-                                      {[
-                                        "Monday",
-                                        "Tuesday",
-                                        "Wednesday",
-                                        "Thursday",
-                                        "Friday",
-                                        "Saturday",
-                                      ].map((day, dayIndex) => (
-                                        <th key={dayIndex}>{day}</th>
-                                      ))}
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {slotTimes.map((slotTime, slotIndex) => (
-                                      <tr key={slotIndex}>
-                                        <td className="font-medium">
-                                          {slotTime.includes("Recess")
-                                            ? "Recess"
-                                            : slotTime.includes("Break")
-                                            ? "Break"
-                                            : slotTime}
-                                        </td>
-                                        {division.timetable.map(
-                                          (
-                                            daySlots: string[],
-                                            dayIndex: number
-                                          ) => (
-                                            <td key={dayIndex}>
-                                              {slotIndex === 2
-                                                ? "Recess"
-                                                : slotIndex === 5
-                                                ? "Break"
-                                                : daySlots[slotIndex] || "-"}
-                                            </td>
-                                          )
-                                        )}
+          {loading ? (
+            <div className="text-center">Loading...</div>
+          ) : Object.entries(groupedData).length > 0 ? (
+            Object.entries(groupedData).map(([department, semesters]: any) => (
+              <div key={department} className="mb-4">
+                <div
+                  tabIndex={0}
+                  className="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box"
+                >
+                  <input type="checkbox" />
+                  <div className="collapse-title text-lg font-semibold capitalize">
+                    {department}
+                  </div>
+                  <div className="collapse-content">
+                    {Object.entries(semesters).map(
+                      ([semester, divisions]: any) => (
+                        <div key={semester} className="mb-4">
+                          <div
+                            tabIndex={0}
+                            className="collapse collapse-arrow border border-base-300 bg-base-100 rounded-box"
+                          >
+                            <input type="checkbox" />
+                            <div className="collapse-title text-md font-medium">
+                              Semester: {semester}
+                            </div>
+                            <div className="collapse-content">
+                              {divisions.map((division: any) => (
+                                <div key={division.division} className="mb-4">
+                                  <h3 className="text-3xl font-medium my-4 text-center">
+                                    Division: {division.division}
+                                  </h3>
+                                  <button
+                                    className="btn btn-primary m-4 w-full flex items-center justify-center"
+                                    onClick={() => exportToExcel(division)}
+                                  >
+                                    Download as Excel
+                                  </button>
+                                  <table className="table w-full border border-base-300">
+                                    <thead>
+                                      <tr className="bg-base-300 text-base-content">
+                                        <th className="px-4 py-2">Time/Day</th>
+                                        {[
+                                          "Monday",
+                                          "Tuesday",
+                                          "Wednesday",
+                                          "Thursday",
+                                          "Friday",
+                                          "Saturday",
+                                        ].map((day, index) => (
+                                          <th
+                                            key={index}
+                                            className="px-4 py-2 text-sm"
+                                          >
+                                            {day}
+                                          </th>
+                                        ))}
                                       </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            ))}
+                                    </thead>
+                                    <tbody>
+                                      {slotTimes.map((time, timeIndex) => (
+                                        <tr
+                                          key={timeIndex}
+                                          className={
+                                            timeIndex % 2 === 0
+                                              ? "bg-base-100"
+                                              : "bg-base-200"
+                                          }
+                                        >
+                                          <td className="px-4 py-2 font-medium">
+                                            {time}
+                                          </td>
+                                          {division.timetable.map(
+                                            (
+                                              daySlots: string[],
+                                              dayIndex: number
+                                            ) => (
+                                              <td
+                                                key={dayIndex}
+                                                className="px-4 py-2 text-center text-sm"
+                                              >
+                                                {daySlots[timeIndex] ||
+                                                  "Free Slot"}
+                                              </td>
+                                            )
+                                          )}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                  <button
+                                    className="btn btn-error m-4 w-full flex items-center justify-center"
+                                    onClick={() =>
+                                      deleteTimeTable(division._id)
+                                    }
+                                  >
+                                    <Delete size={20} className="mr-2" />
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )
-                  )}
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <div className="text-center">No timetables found</div>
+          )}
         </div>
       </div>
     </>

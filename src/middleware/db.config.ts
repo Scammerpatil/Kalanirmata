@@ -1,5 +1,6 @@
 import SubjectModel from "@/models/Subject";
 import TeacherModel from "@/models/Teacher";
+import { TimetableModel } from "@/models/TimeTable";
 import mongoose from "mongoose";
 
 // Database Connection
@@ -19,6 +20,7 @@ const dbConfig = async () => {
   }
   TeacherModel;
   SubjectModel;
+  TimetableModel;
 };
 
 export default dbConfig;
